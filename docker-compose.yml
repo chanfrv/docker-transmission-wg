@@ -1,0 +1,40 @@
+version: '2.1'
+services:
+  wireguard-transmission:
+    image: linuxserver/wireguard
+    container_name: wireguard-transmission
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=Europe/Amsterdam
+    volumes:
+      - /opt/docker/volumes/wireguard-transmission/config:/config
+      - /lib/modules:/lib/modules
+    ports:
+      - 51820:51820/udp
+      - 9091:9091
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+ 
+  transmission:
+    image: linuxserver/transmission
+    container_name: transmission
+    environment:
+      - PUID=1001
+      - UGID=1001
+      - TZ=Europe/Amsterdam
+      - TRANSMISSION_WEB_HOME=/transmission-web-control/
+    volumes:
+      - /opt/docker/volumes/transmission/config:/config
+      - /path/to/downloads:/downloads
+      - /path/to/watch:/watch
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    depends_on:
+      - wireguard-transmission
+    network_mode: service:wireguard-transmission
