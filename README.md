@@ -1,76 +1,67 @@
-# Docker - Transmission
+# Docker - Transmission with Wireguard
 
 Transmission running in a docker container with `docker-compose`. The goal is to have transmission run behind a vpn while the system runs with the normal network.
 
 ## 1. Docker compose config
 
-Example directory `~/Transmission`:
-```
-.
-├── docker-compose.yml
-└── wg/
-```
-
 In `docker-compose.yml`:
-- Replace `/path/to/downloads` with for example `/home/\<user>/Transmission/downloads`
-- Replace `/path/to/watch` for example `/home/\<user>/Transmission/watch`
+- Replace `/path/to/downloads` with for example `/home/<user>/Transmission/downloads` or somewhere with disk space.
+- Replace `/path/to/watch` with for example `/home/<user>/Transmission/watch`.
 
 ## 2. Wireguard config
 
-In `~/Transmission/wg/` generate the keys with `wg genkey | tee privatekey | wg pubkey > publickey` and add the public key in the vpn client.
+#### _Keys:_
 
-```
-.
-├── docker-compose.yml
-└── wg/
-    ├── privatekey
-    └── publickey
-```
+In a directory `~/.wg/`:
+- Generate the keys with `wg genkey | tee privatekey | wg pubkey > publickey`.
+- Change the rights with `chmod 600 privatekey`.
+- Add the public key to the vpn client key manager.
 
-Sample wireguard config file to place in `/opt/docker/volumes/wireguard-transmission/config/wg0.conf` to fill with the vpn provider info:
+#### _Sample wireguard config file:_
 
 ```
 [Interface]
-PrivateKey = <my-pubkey>    # host private key in wg/privatekey
-Address = <vpn-my-ip>       # host IP assigned by the vpn provider
-DNS = <vpn-my-dns>          # DNS assigned by the vpn provider
+PrivateKey = <my-privatekey>    # host private key in ~/.wg/privatekey
+Address = <vpn-my-ip>           # host IP assigned by the vpn provider
+DNS = <vpn-dns>                 # DNS assigned by the vpn provider
 
 [Peer]
-PublicKey = <vpn-privkey>               # vpn server public key
-Endpoint = <vpn-address>:<vpn-port>     # vpn server address
+PublicKey = <vpn-publickey>             # vpn server public key
+Endpoint = <vpn-hostname>:<vpn-port>    # vpn server address
 AllowedIPs = 0.0.0.0/0
 ```
+
+Once completed the file is placed in `/opt/docker/volumes/wireguard-transmission/config/wg0.conf`.
 
 ## 3. Launch the container
 
 ```
-cd ~/Transmission
 docker-compose up -d
 ```
 
 ## 4. Launch transmission client
 
 - Use `ip a show dev docker0` to get the container local ip.
-- Download `transmission-gtk` or `transmission-qt`
+- Download `transmission-gtk` or `transmission-qt`.
 - Edit > Change Session > Connect to remote session
     - Host: \<container-ip>
     - Port: 9091
 
 ## 5. Quality control
 
-### Container IP and geolocation
+#### _Container IP and geolocation:_
 
 Should display the home public ip and geolocation:
 ```
 curl ipinfo.io
 ```
 
-Should display the vpn public ip and geolocation:
+Should display the vpn server public ip and geolocation:
 ```
 docker exec transmission sh -c 'curl ipinfo.io'
 ```
 
-### Network disabled in case of vpn outage
+#### _Network disabled in case of vpn outage:_
 
 Stop the vpn container:
 ```
